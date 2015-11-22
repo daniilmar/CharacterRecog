@@ -8,11 +8,8 @@
 #include <vector>
 #include <string>
 #include <fstream>
-#include "Skelet.h"
-#include "Features.h"
-#include "FindingRect.h"
+#include "Preparing.h"
 
-#define SIZE 32
 using namespace cv;
 using namespace std;
 void thresh_callback();
@@ -43,25 +40,8 @@ int _tmain(int argc, _TCHAR* argv[])
 		file >> file_name;*/
 		src = imread(file_name);// считываем картинку 
 
-		cvtColor(src, src_gray, CV_BGR2GRAY);
-		threshold(src_gray, src_gray, 128, 255, CV_THRESH_BINARY_INV);
-
-		//--------- обрезаем букву ------------
-		if (!findRect(src_gray, src_gray))
-			return -1;
-		resize(src_gray, src_gray, Size(SIZE, SIZE));
-		threshold(src_gray, src_gray, 64, 255, CV_THRESH_BINARY);
-
-		//--------- удал€ем разрывы контура ------------
-		dilate(src_gray, src_gray, element);
-		erode(src_gray, src_gray, element);
-
-		//------------------—келетезаци€----------------------------------------------
-
-		//thin_b(src_gray);
-		//-----------------------------------------------------
-		imshow("Hello World", src_gray);
-		getFeatures(src_gray, ass);
+		
+		getFeatures(src, ass);
 		for (int i = 0; i < 24; ++i){
 			file1 << ass[i] << '\t';
 			//std::cout << ass[i] << '\t';
@@ -72,14 +52,14 @@ int _tmain(int argc, _TCHAR* argv[])
 		//std::cin >> fd;
 	}
 	file1.close();
-	thresh_callback();
+	//thresh_callback();
 	// ждЄм нажати€ клавиши
 	waitKey(0);
 	delete[] ass;
 	destroyWindow("Hello World");
 	return 0;
 }
-
+/*
 int thresh = 10;
 int max_thresh = 255;
 RNG rng(12345);
@@ -107,3 +87,4 @@ void thresh_callback()
 	resize(drawing, drawing, Size(128, 128));
 	imshow("Contours", drawing);
 }
+*/
