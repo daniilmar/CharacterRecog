@@ -4,18 +4,20 @@
 
 
 void getFeatures(Mat& image, double * features){
+	Mat image2 = image.clone();
 	prepare(image, image);
 
-	Mat skelet = image.clone();
+	prepare2(image2, image2);
+	Mat skelet = image2.clone();
 	thin_b(skelet);
 
 	imshow("Hello World", skelet);
-	features[0] = countNonZero(skelet);
+	//features[0] = countNonZero(skelet);
 	vector<vector<Point> > contours;
 	vector<Vec4i> hierarchy;
 	/// Find contours
 	findContours(image, contours, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);// может лучше skelet
-	features[1] = contours.size();
+/*	features[1] = contours.size();
 	features[2] = contourArea(contours[0]); //изменения здесь повлекут изменения в дальнейшем
 	if ((arcLength(contours[0], true)* arcLength(contours[0], true))!=0)
 		features[3] = features[2] / (arcLength(contours[0], true)* arcLength(contours[0], true));
@@ -33,7 +35,10 @@ void getFeatures(Mat& image, double * features){
 			++count;
 		}
 		s /= count - 1;
-		features[4] = s / features[2];
+		if (features[2] != 0)
+			features[4] = s / features[2];
+		else
+			features[4] = 1000;
 	}
 	/*features[5] = moments(image, true).m00;
 	features[6] = moments(image, true).m01;
@@ -54,17 +59,89 @@ void getFeatures(Mat& image, double * features){
 	features[19] = moments(image, true).mu21;
 	features[20] = moments(image, true).mu12;
 	features[21] = moments(image, true).mu03;*/
-	features[5] = image.rows*image.cols / features[2];
+	/*if (features[2] != 0)
+		features[5] = image.rows*image.cols / features[2];
+	else
+		features[5] = 1000;*/
+	features[0] = findTriple(skelet);
+	/*features[1] = moments(image, true).nu02;
+	features[2] = moments(image, true).nu03;
+	features[3] = moments(image, true).nu11;
+	features[4] = moments(image, true).nu12;
+	features[5] = moments(image, true).nu20;
+	features[6] = moments(image, true).nu21;
+	features[7] = moments(image, true).nu30;*/
+	myCount(skelet, &features[1]);
 	//features[22] = image.rows*image.cols / features[2];
 
 }
+void getFeatures3(Mat& image, double * features){
+	Mat image2 = image.clone();
+	prepare(image, image);
 
+	prepare2(image2, image2);
+	Mat skelet = image2.clone();
+	thin_b(skelet);
+
+	imshow("Hello World", skelet);
+	//features[0] = countNonZero(skelet);
+	vector<vector<Point> > contours;
+	vector<Vec4i> hierarchy;
+	/// Find contours
+	findContours(image, contours, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);// может лучше skelet
+	
+	
+	features[0] = findTriple(skelet);
+	features[1] = contours.size();
+	if (contours.size() == 1)
+		features[2] = 0;
+	else
+	{
+		int count = 1;
+		double s = 0;
+		while (count < contours.size()){
+			s += contourArea(contours[count]);
+			++count;
+		}
+		s /= (count - 1);
+		features[2] = contourArea(contours[0])/s;
+	}
+
+	features[3] = moments(image, true).nu02;
+	features[4] = moments(image, true).nu03;
+	features[5] = moments(image, true).nu11;
+	features[6] = moments(image, true).nu12;
+	features[7] = moments(image, true).nu20;
+	features[8] = moments(image, true).nu21;
+	features[9] = moments(image, true).nu30;
+	myCount(skelet, &features[10]);
+	//features[22] = image.rows*image.cols / features[2];
+
+}
 bool prepare(Mat& src, Mat& out){
 	Mat src_gray;
 	Mat element = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 	cvtColor(src, src_gray, CV_BGR2GRAY);
 	threshold(src_gray, src_gray, 128, 255, CV_THRESH_BINARY_INV);
 	
+	//--------- обрезаем букву ------------
+	if (!findRect(src_gray, src_gray))
+		return -1;
+	resize(src_gray, src_gray, Size(SIZE, SIZE));
+	threshold(src_gray, src_gray, 64, 255, CV_THRESH_BINARY);
+
+	//--------- удаляем разрывы контура ------------
+	dilate(src_gray, src_gray, element);
+	erode(src_gray, src_gray, element);
+	out = src_gray;
+	return true;
+}
+bool prepare2(Mat& src, Mat& out){
+	Mat src_gray;
+	Mat element = getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
+	cvtColor(src, src_gray, CV_BGR2GRAY);
+	threshold(src_gray, src_gray, 128, 255, CV_THRESH_BINARY_INV);
+
 	//--------- обрезаем букву ------------
 	if (!findRect(src_gray, src_gray))
 		return -1;
@@ -208,4 +285,76 @@ int t1a(Mat &image, int i, int j, int * a, int  &b)
 	b = b + a[7];
 	return m;
 }
+
+void myCount(Mat &image,double *fet){
+
+	int counter = 0;
+	bool counted = false;
+	for (int i = 0; i < image.rows; i++)
+	{
+		fet[i] = 0;
+		for (int j = 0; j < image.cols; j++)
+		{
+			if (image.data[i*image.cols + j] != 0)
+				fet[i] += 1;
+		}
+	}
+	for (int j = 0; j < image.cols; j++)
+	{
+		fet[j + image.rows] = 0;
+		for (int i = 0; i < image.rows; i++)
+		{
+			if (image.data[i*image.cols + j] != 0)
+				fet[j+ image.rows] += 1;
+		}
+	}
+}
+int findTriple(Mat &image){
+	int sum = 0;
+	int count = 0;
+	for (int i = 0; i < image.rows; i++)
+	{
+		for (int j = 0; j < image.cols; j++)
+		{
+			if (image.data[(i)*image.cols + j] != 0)
+			{
+				if (i - 1 >= 0) {
+					sum += image.data[(i - 1)*image.cols + j];
+					if (j + 1 < image.cols)
+						sum += image.data[(i - 1)*image.cols + j + 1];
+					if (j - 1 >= 0)
+						sum += image.data[(i - 1)*image.cols + j - 1];
+				}
+				else{
+					if (j + 1 < image.cols)
+						sum += image.data[(i)*image.cols + j + 1];
+					if (j - 1 >= 0)
+						sum += image.data[(i)*image.cols + j - 1];
+				}
+				if (i + 1 < image.rows) {
+					sum += image.data[(i + 1)*image.cols + j];
+					if (j + 1 < image.cols)
+						sum += image.data[(i + 1)*image.cols + j + 1];
+					if (j - 1 >= 0)
+						sum += image.data[(i + 1)*image.cols + j - 1];
+				}
+				else{
+					if (j + 1 < image.cols)
+						sum += image.data[(i)*image.cols + j + 1];
+					if (j - 1 >= 0)
+						sum += image.data[(i)*image.cols + j - 1];
+				}
+
+				sum /= 255;
+				if (sum > 3)
+					++count;
+			}
+			sum = 0;
+		}
+	}
+	return count;
+}
+
+
+
 
