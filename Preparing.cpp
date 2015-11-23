@@ -75,6 +75,25 @@ void getFeatures(Mat& image, double * features){
 	//features[22] = image.rows*image.cols / features[2];
 
 }
+
+void getFeatures2(Mat& image, double * features){
+	prepare(image, image);
+	Mat discos;
+	image.convertTo(discos, CV_32FC1);
+	dct(discos, discos);
+	int n = 4;
+	Mat discos1(discos, Rect(0, 0, n, n));
+	for (int i = 0; i < n; ++i){
+		for (int j = 0; j < n; ++j){
+			features[i*n + j] = discos1.at<float>(i, j);
+		}
+	}
+	features[n*n] = moments(image, true).nu02;
+	Mat skelet = image.clone();
+	thin_b(skelet);
+	features[n*n + 1] = findTriple(skelet);
+}
+
 void getFeatures3(Mat& image, double * features){
 	Mat image2 = image.clone();
 	prepare(image, image);
@@ -355,6 +374,38 @@ int findTriple(Mat &image){
 	return count;
 }
 
-
+int intersection_count(Mat &image, double proportion, bool vertical){
+	int line = 0;
+	int counter = 0;
+	bool counted = false;
+	if (vertical) {
+		line = image.cols*proportion;
+		for (int i = 0; i < image.cols; ++i){
+			if (image.data[i*image.cols + line] != 0){
+				if (!counted){
+					++counter;
+					counted = true;
+				}
+			}
+			else
+				counted = false;
+		}
+		return counter;
+	}
+	else{
+		line = image.rows*proportion;
+		for (int i = 0; i < image.cols; ++i){
+			if (image.data[line*image.rows + i] != 0){
+				if (!counted){
+					++counter;
+					counted = true;
+				}
+			}
+			else
+				counted = false;
+		}
+		return counter;
+	}
+}
 
 
