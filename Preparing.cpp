@@ -17,7 +17,11 @@ void getFeatures(Mat& image, double * features){
 	findContours(image, contours, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);// может лучше skelet
 	features[1] = contours.size();
 	features[2] = contourArea(contours[0]); //изменения здесь повлекут изменения в дальнейшем
-	features[3] = features[2] / (arcLength(contours[0], true)* arcLength(contours[0], true));
+	if ((arcLength(contours[0], true)* arcLength(contours[0], true))!=0)
+		features[3] = features[2] / (arcLength(contours[0], true)* arcLength(contours[0], true));
+	else
+		features[3] = 1000;
+
 	if (contours.size() == 1)
 		features[4] = 0;
 	else
@@ -31,7 +35,7 @@ void getFeatures(Mat& image, double * features){
 		s /= count - 1;
 		features[4] = s / features[2];
 	}
-	features[5] = moments(image, true).m00;
+	/*features[5] = moments(image, true).m00;
 	features[6] = moments(image, true).m01;
 	features[7] = moments(image, true).m02;
 	features[8] = moments(image, true).m03;
@@ -49,8 +53,10 @@ void getFeatures(Mat& image, double * features){
 	features[18] = moments(image, true).mu30;
 	features[19] = moments(image, true).mu21;
 	features[20] = moments(image, true).mu12;
-	features[21] = moments(image, true).mu03;
-	features[22] = image.rows*image.cols / features[2];
+	features[21] = moments(image, true).mu03;*/
+	features[5] = image.rows*image.cols / features[2];
+	//features[22] = image.rows*image.cols / features[2];
+
 }
 
 bool prepare(Mat& src, Mat& out){
@@ -81,7 +87,7 @@ bool findRect(Mat &src, Mat &out){// обрезает букву под точный размер +1
 	for (int i = 0; i < src.rows; ++i){
 		for (int j = 0; j < src.cols; ++j)
 		{
-			if (src.data[i* src.rows + j] > 128)
+			if (src.data[i* src.cols + j] > 128)
 			{
 				ok = true;
 				if (i<start_y)
@@ -128,8 +134,8 @@ void thin_b(Mat& image)
 		/*	Sub-iteration 1: */
 		for (i = 0; i < image.rows; i++)
 		for (j = 0; j < image.cols; j++) {		/* Scan the entire image */
-			if (image.data[i*image.rows + j] == 0) {
-				res.data[i*image.rows + j] = 0;
+			if (image.data[i*image.cols + j] == 0) {
+				res.data[i*image.cols + j] = 0;
 				continue;
 			}
 			ar = t1a(image, i, j, a, br);	/* Function A */
@@ -137,10 +143,10 @@ void thin_b(Mat& image)
 			p2 = a[2] * a[4] * a[6];
 			if ((ar == 1) && ((br >= 2 * 255) && (br <= 6 * 255)) &&
 				(p1 == 0) && (p2 == 0))  {
-				res.data[i*image.rows + j] = 255;
+				res.data[i*image.cols + j] = 255;
 				cont = 1;
 			}
-			else res.data[i*image.rows + j] = 0;
+			else res.data[i*image.cols + j] = 0;
 		}
 
 
@@ -149,8 +155,8 @@ void thin_b(Mat& image)
 
 		for (i = 0; i < image.rows; i++)
 		for (j = 0; j < image.cols; j++) {		/* Scan the entire image */
-			if (image.data[i*image.rows + j] == 0) {
-				res.data[i*image.rows + j] = 0;
+			if (image.data[i*image.cols + j] == 0) {
+				res.data[i*image.cols + j] = 0;
 				continue;
 			}
 			ar = t1a(image, i, j, a, br);	/* Function A */
@@ -158,10 +164,10 @@ void thin_b(Mat& image)
 			p2 = a[0] * a[4] * a[6];
 			if ((ar == 1) && ((br >= 2 * 255) && (br <= 6 * 255)) &&
 				(p1 == 0) && (p2 == 0))  {
-				res.data[i*image.rows + j] = 255;
+				res.data[i*image.cols + j] = 255;
 				cont = 1;
 			}
-			else res.data[i*image.rows + j] = 0;
+			else res.data[i*image.cols + j] = 0;
 		}
 
 		image -= res;
@@ -180,17 +186,17 @@ int t1a(Mat &image, int i, int j, int * a, int  &b)
 
 	for (n = 0; n<8; n++) a[n] = 0;
 	if (i - 1 >= 0) {
-		a[0] = image.data[(i - 1)*image.rows + j];
-		if (j + 1 < image.cols) a[1] = image.data[(i - 1)*image.rows + j + 1];
-		if (j - 1 >= 0) a[7] = image.data[(i - 1)*image.rows + j - 1];
+		a[0] = image.data[(i - 1)*image.cols + j];
+		if (j + 1 < image.cols) a[1] = image.data[(i - 1)*image.cols + j + 1];
+		if (j - 1 >= 0) a[7] = image.data[(i - 1)*image.cols + j - 1];
 	}
 	if (i + 1 < image.rows) {
-		a[4] = image.data[(i + 1)*image.rows + j];
-		if (j + 1 < image.cols) a[3] = image.data[(i + 1)*image.rows + j + 1];
-		if (j - 1 >= 0) a[5] = image.data[(i + 1)*image.rows + j - 1];
+		a[4] = image.data[(i + 1)*image.cols + j];
+		if (j + 1 < image.cols) a[3] = image.data[(i + 1)*image.cols + j + 1];
+		if (j - 1 >= 0) a[5] = image.data[(i + 1)*image.cols + j - 1];
 	}
-	if (j + 1 < image.cols) a[2] = image.data[(i)*image.rows + j + 1];
-	if (j - 1 >= 0) a[6] = image.data[(i)*image.rows + j - 1];
+	if (j + 1 < image.cols) a[2] = image.data[(i)*image.cols + j + 1];
+	if (j - 1 >= 0) a[6] = image.data[(i)*image.cols + j - 1];
 
 	m = 0;
 	b = 0;
