@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Preparing.h"
 
-
+#define PI           3.14159265358979323846
 
 void getFeatures(Mat& image, double * features){
 	Mat image2 = image.clone();
@@ -408,4 +408,31 @@ int intersection_count(Mat &image, double proportion, bool vertical){
 	}
 }
 
+double Cjk(int j, int k, int N)
+{
+	if (j == 0)
+		return sqrt(1.0 / N)*cos(PI*(2 * k + 1)*j / (2 * N));
+	else
+		return sqrt(2.0 / N)*cos(PI*(2 * k + 1)*j / (2 * N));
+}
 
+void ourDct(Mat& src, Mat& out)
+{
+	Mat discos;
+	src.convertTo(discos, CV_32FC1);
+	Mat C(src.rows, src.cols, CV_32FC1);
+
+	Mat C_T(src.cols, src.rows, CV_32FC1);
+	for (int i = 0; i < src.rows; i++)
+	{
+		for (int j = 0; j < src.cols; j++)
+		{
+			C.at<float>(i, j) = Cjk(i,j, src.rows);
+		}
+
+	}
+	
+	transpose(C, C_T);
+	discos = C*discos*C_T;
+	out = discos.clone();
+}

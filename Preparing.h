@@ -28,3 +28,5 @@ void myCount(Mat &image,double * fet);
 int findTriple(Mat &image);
 
 int intersection_count(Mat &image, double proportion, bool vertical = false);
+
+void ourDct(Mat& src, Mat& out);
